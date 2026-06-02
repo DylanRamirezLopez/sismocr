@@ -1,0 +1,32 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Pytest
+.pytest_cache/
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# Alembic
+*.egg-info/
+
+# Data exports
+export_*.csv
+
+# OS
+.DS_Store
+Thumbs.db
