@@ -9,13 +9,6 @@ databases:
     ipAllowList: []
 
 services:
-  - type: redis
-    name: sismocr-redis
-    plan: free
-    region: oregon
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
-
   - type: web
     name: sismocr-api
     runtime: docker
@@ -30,10 +23,6 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: sismocr-db
-          property: connectionString
-      - key: REDIS_URL
-        fromRedis:
-          name: sismocr-redis
           property: connectionString
       - key: DEBUG
         value: "false"
@@ -50,16 +39,12 @@ services:
     branch: main
     rootDir: backend
     dockerContext: .
-    startCommand: python -m app.workers.ingestion_worker
+    dockerfilePath: ./Dockerfile.worker
     autoDeploy: true
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: sismocr-db
-          property: connectionString
-      - key: REDIS_URL
-        fromRedis:
-          name: sismocr-redis
           property: connectionString
       - key: LOG_LEVEL
         value: INFO
