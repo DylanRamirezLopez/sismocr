@@ -73,6 +73,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "https://sismoscr.app",
+        "https://sismoscr.vercel.app",
+        "https://sismoscr-git-main-portafolioddy.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
