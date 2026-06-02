@@ -40,6 +40,8 @@ async def lifespan(app: FastAPI):
     await init_redis()
 
     async with engine.begin() as conn:
+        # Drop and recreate to pick up schema changes (safe while DB is empty)
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     asyncio.create_task(alert_manager.heartbeat())

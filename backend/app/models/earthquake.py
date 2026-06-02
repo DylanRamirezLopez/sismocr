@@ -29,9 +29,9 @@ class Earthquake(Base):
     location_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     province: Mapped[str | None] = mapped_column(String(100), nullable=True)
     source: Mapped[SourceEnum] = mapped_column(SAEnum(SourceEnum), nullable=False, default=SourceEnum.usgs)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False, index=True)
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     def __repr__(self):
         return f"<Earthquake {self.magnitude}M {self.location_description} @{self.occurred_at}>"
