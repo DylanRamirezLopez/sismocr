@@ -2,8 +2,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 from app.config import settings
 
+# Render's fromDatabase returns postgresql:// without +asyncpg.
+# Fix: ensure async driver is used for Postgres URLs.
+_db_url = settings.database_url
+if _db_url.startswith("postgresql://") and "+" not in _db_url.split("://")[0]:
+    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 engine = create_async_engine(
-    settings.database_url,
+    _db_url,
     poolclass=NullPool,
     echo=settings.debug,
 )
