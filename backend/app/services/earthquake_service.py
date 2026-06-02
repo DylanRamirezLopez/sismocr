@@ -106,7 +106,7 @@ async def get_stats(db: AsyncSession) -> dict:
             Earthquake.source
         )
     )
-    by_source = {row.source: row.cnt for row in sources_raw}
+    by_source = {str(row.source): row.cnt for row in sources_raw}
 
     top_raw = await db.execute(
         select(Earthquake.magnitude, Earthquake.location_description, Earthquake.occurred_at)

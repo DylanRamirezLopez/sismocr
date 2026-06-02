@@ -125,12 +125,11 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     recent = (await db.execute(recent_q)).scalar() or 0
 
     # Count per source
-    from sqlalchemy import literal_column
     sources_q = select(
         Earthquake.source, func.count(Earthquake.id).label("cnt")
     ).group_by(Earthquake.source)
     sources_raw = await db.execute(sources_q)
-    by_source = {row.source: row.cnt for row in sources_raw}
+    by_source = {str(row.source): row.cnt for row in sources_raw}
 
     # Top 5 magnitudes
     top_q = (
