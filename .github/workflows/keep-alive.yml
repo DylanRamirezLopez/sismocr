@@ -1,0 +1,12 @@
+# Keep Render free tier awake: pings /health every 10 minutes
+# GitHub Actions has no cost for scheduled workflows
+name: Keep Alive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render API health endpoint
+        run: curl -s -o /dev/null -w "%{http_code}" https://sismocr-api.onrender.com/health
