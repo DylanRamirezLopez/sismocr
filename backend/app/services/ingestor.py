@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import httpx
-from bs4 import BeautifulSoup
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.earthquake import Earthquake, SourceEnum
-from app.schemas.earthquake import EarthquakeCreate
 from app.services.geocoder import get_province as _get_province
 
 logger = logging.getLogger("sismocr.ingestor")
@@ -114,8 +111,6 @@ class IngestorService:
         except httpx.RequestError as exc:
             logger.error("OVSICORI request failed: %s", exc)
             return []
-
-        import re
 
         results: list[RawQuakeData] = []
         seen_ids: set[str] = set()
