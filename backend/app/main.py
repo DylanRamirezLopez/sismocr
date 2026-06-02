@@ -44,6 +44,12 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(alert_manager.heartbeat())
 
+    # Start ingestion workers as background tasks (free Render tier has no worker dyno)
+    from app.workers.ingestion_worker import run_usgs_poll, run_ovsicori_scrape, run_rsn_scrape
+    asyncio.create_task(run_usgs_poll())
+    asyncio.create_task(run_ovsicori_scrape())
+    asyncio.create_task(run_rsn_scrape())
+
     yield
 
     await close_redis()

@@ -1,5 +1,5 @@
-# Render Blueprint — auto-deploy API + Worker + PostgreSQL + Redis
-# Conecta tu repo en https://dashboard.render.com/select-repo
+# Render Blueprint — auto-deploy API + PostgreSQL
+# Worker runs as background task inside the API (free tier compatible)
 databases:
   - name: sismocr-db
     databaseName: sismocr
@@ -30,21 +30,3 @@ services:
         value: INFO
       - key: ENABLE_API_V2
         value: "true"
-
-  - type: worker
-    name: sismocr-worker
-    runtime: docker
-    region: oregon
-    plan: free
-    branch: main
-    rootDir: backend
-    dockerContext: .
-    dockerfilePath: ./Dockerfile.worker
-    autoDeploy: true
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: sismocr-db
-          property: connectionString
-      - key: LOG_LEVEL
-        value: INFO
