@@ -1,0 +1,59 @@
+# Render Blueprint — auto-deploy API + Worker + PostgreSQL + Redis
+# Connect your GitHub repo at https://dashboard.render.com/select-repo
+# Render will detect this file and create all services automatically.
+databases:
+  - name: sismocr-db
+    databaseName: sismocr
+    user: sismocr
+    plan: free
+    region: oregon
+
+redis:
+  - name: sismocr-redis
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: sismocr-api
+    runtime: docker
+    region: oregon
+    plan: free
+    rootDir: backend
+    dockerContext: backend
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sismocr-db
+          property: connectionString
+      - key: REDIS_URL
+        fromRedis:
+          name: sismocr-redis
+          property: connectionString
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_API_V2
+        value: "true"
+
+  - type: worker
+    name: sismocr-worker
+    runtime: docker
+    region: oregon
+    plan: free
+    rootDir: backend
+    dockerContext: backend
+    startCommand: python -m app.workers.ingestion_worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sismocr-db
+          property: connectionString
+      - key: REDIS_URL
+        fromRedis:
+          name: sismocr-redis
+          property: connectionString
+      - key: LOG_LEVEL
+        value: INFO
