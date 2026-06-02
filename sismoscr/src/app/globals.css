@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-cr-navy: #002B7F;
+  --color-cr-navy-light: #0039A6;
+  --color-cr-white: #F8F9FA;
+  --color-cr-red: #CE1126;
+  --color-cr-red-light: #E83045;
+  --color-cr-red-dark: #A80E1F;
+
+  --color-primary: #002B7F;
+  --color-primary-light: #0039A6;
+  --color-surface: #F8F9FA;
+  --color-surface-alt: #FFFFFF;
+  --color-danger: #CE1126;
+  --color-danger-light: #E83045;
+  --color-text: #1A1A2E;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E7EB;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  --animate-pulse-radar: pulse-radar 2s ease-out infinite;
+  --animate-border-pulse: border-pulse 1.5s ease-in-out infinite;
+  --animate-toast-in: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-shake: shake 0.5s ease-in-out;
+}
+
+@keyframes pulse-radar {
+  0% { r: 0; opacity: 0.6; }
+  100% { r: 60; opacity: 0; }
+}
+
+@keyframes border-pulse {
+  0%, 100% { border-color: rgba(206, 17, 38, 0); }
+  50% { border-color: rgba(206, 17, 38, 0.6); }
+}
+
+@keyframes toast-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+:root {
+  --bg: #F8F9FA;
+  --text: #1A1A2E;
+  --surface: #FFFFFF;
+  --surface-glass: rgba(255, 255, 255, 0.8);
+}
+
+.dark {
+  --bg: #0F172A;
+  --text: #E2E8F0;
+  --surface: #1E293B;
+  --surface-glass: rgba(30, 41, 59, 0.85);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background: rgba(30, 41, 59, 0.95);
+  color: #E2E8F0;
+}
+
+.leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.dark .leaflet-popup-tip {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.leaflet-control-zoom a {
+  background: var(--surface-glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--text);
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--surface);
+}
+
+.cluster-icon {
+  background: rgba(0, 43, 127, 0.85);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 43, 127, 0.3);
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--color-border);
+}
