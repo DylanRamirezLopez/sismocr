@@ -13,5 +13,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Default: API server. Override CMD for worker (Render passes CMD automatically)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render sets PORT env var (usually 10000). Use it so health checks work.
+CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
