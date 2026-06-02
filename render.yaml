@@ -20,7 +20,7 @@ services:
     region: oregon
     plan: free
     rootDir: backend
-    dockerContext: backend
+    dockerContext: .
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -44,7 +44,7 @@ services:
     region: oregon
     plan: free
     rootDir: backend
-    dockerContext: backend
+    dockerContext: .
     startCommand: python -m app.workers.ingestion_worker
     envVars:
       - key: DATABASE_URL
