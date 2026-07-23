@@ -1,4 +1,4 @@
-# SismosCR 🌋 — Monitoreo Sísmico de Costa Rica en Tiempo Real
+# SismosCR  — Monitoreo Sísmico de Costa Rica en Tiempo Real
 
 **Live App:** [sismoscr.vercel.app](https://sismoscr.vercel.app)
 **API:** [sismocr-api.onrender.com](https://sismocr-api.onrender.com/docs)
@@ -25,7 +25,7 @@ USGS es global y confiable, pero sus datos para CR tienen latencia de minutos. R
 
 ---
 
-## 🏗️ Arquitectura
+##  Arquitectura
 
 ```
 sismocr/
@@ -82,7 +82,7 @@ Usamos `reportlab` (no jsPDF). Razón: el PDF se genera en el backend y se sirve
 
 ---
 
-## 🚀 Instalación
+##  Instalación
 
 ```bash
 git clone https://github.com/DylanRamirezLopez/sismocr.git
@@ -100,7 +100,7 @@ start cmd /c "cd backend && python -m app.workers.ingestion_worker"
 start cmd /c "cd sismoscr && npm run dev"
 ```
 
-## 🧪 Tests
+##  Tests
 
 ```bash
 cd backend && python -m pytest tests/ -v    # 22 tests
@@ -109,7 +109,7 @@ cd sismoscr && npm run build                 # Production build
 cd sismoscr && npx playwright test           # E2E critical flows
 ```
 
-## 🌐 Despliegue
+##  Despliegue
 
 | Componente | Plataforma | URL |
 |-----------|-----------|-----|
