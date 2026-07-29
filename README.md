@@ -11,7 +11,7 @@
 
 ---
 
-## 📡 Fuentes de datos
+##  Fuentes de datos
 
 | Fuente | Método | Intervalo | Cobertura |
 |--------|--------|-----------|-----------|
@@ -52,7 +52,7 @@ v1 queda 100% intacta para compatibilidad. v2 usa el mismo `earthquake_service.p
 
 ---
 
-## ⚙️ Decisiones técnicas
+##  Decisiones técnicas
 
 ### Offline-first con Service Worker + IndexedDB
 
@@ -120,6 +120,6 @@ cd sismoscr && npx playwright test           # E2E critical flows
 
 **Keep Alive:** Render Free duerme tras 15 min sin tráfico. Un workflow de GitHub Actions pingea `/health` cada 10 minutos para mantenerlo despierto.
 
-## 📄 Licencia
+##  Licencia
 
 MIT — ver [LICENSE](./LICENSE). Eres libre de usar, modificar y distribuir.
