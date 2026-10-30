@@ -10,6 +10,17 @@ export interface Earthquake {
   status: "recent" | "past" | "critical";
 }
 
+export interface ApiEarthquake {
+  id: string;
+  magnitude: number;
+  depth_km: number;
+  location_description: string | null;
+  latitude: number;
+  longitude: number;
+  occurred_at: string;
+  province: string | null;
+}
+
 export interface EarthquakeAlert {
   id: string;
   magnitude: number;

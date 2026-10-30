@@ -1,17 +1,17 @@
 /*
  * Service Worker for SismosCR.
- * Three strategies:
- * 1. Map tiles: Cache-first with IndexedDB fallback (offline-first)
- * 2. API (v1/v2): Network-first (always try server, fallback to cache)
- * 3. Static assets: Cache-first (preloaded at install)
- *
+ * - HTML: red primero, para no congelar una versión vieja de la app
+ * - API: red primero con timeout; sin red, copia guardada marcada con X-SW-Cached
+ * - Tiles: caché primero, con tope de entradas
+ * - Resto (assets con hash): caché primero
  * Push notifications: Listens for push events, shows notification with quake data.
- * Why IndexedDB for tiles: Cache API has storage limits per origin (~50MB).
- *   IndexedDB can store hundreds of MBs, enough for offline CR map tiles.
  */
 
 var CACHE = "sismoscr-v2";
+var TILE_CACHE = "sismoscr-tiles-v1";
 var STATIC_ASSETS = ["/", "/history"];
+var MAX_TILES = 1000;
+var API_TIMEOUT_MS = 15000;
 
 // ── Install: precache shell ──────────────────────────────────────────────────
 self.addEventListener("install", function (event) {
@@ -30,7 +30,7 @@ self.addEventListener("activate", function (event) {
       return Promise.all(
         keys
           .filter(function (k) {
-            return k !== CACHE;
+            return k !== CACHE && k !== TILE_CACHE;
           })
           .map(function (k) {
             return caches.delete(k);
@@ -95,45 +95,93 @@ self.addEventListener("fetch", function (event) {
 
   if (request.method !== "GET") return;
 
-  // HTML: red primero para no congelar una versión vieja de la app
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request));
+    event.respondWith(pageStrategy(request));
     return;
   }
 
-  // Map tiles: cache-first with IndexedDB
-  if (url.hostname.indexOf("basemaps.cartocdn.com") !== -1) {
+  if (url.hostname === "tile.openstreetmap.org") {
     event.respondWith(tileStrategy(request));
     return;
   }
 
-  // API calls: network-first (fresh data preferred)
   if (url.pathname.indexOf("/api/") === 0) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(apiStrategy(request));
     return;
   }
 
-  // Everything else: cache-first (static assets)
   event.respondWith(cacheFirst(request));
 });
 
 // ── Strategies ────────────────────────────────────────────────────────────────
 
-function tileStrategy(request) {
-  return caches.match(request).then(function (cached) {
-    if (cached) return cached;
-    // Fetch and store in both Cache API and IndexedDB
-    return fetch(request).then(function (response) {
-      if (response.ok) {
-        var copy = response.clone();
-        caches.open(CACHE).then(function (cache) {
-          cache.put(request, copy);
-        });
-        // Store in IndexedDB for offline persistence
-        storeTileInIDB(request.url, response.clone());
-      }
+function saveCopy(request, response) {
+  if (!response.ok) return;
+  var copy = response.clone();
+  caches.open(CACHE).then(function (cache) {
+    cache.put(request, copy);
+  });
+}
+
+function pageStrategy(request) {
+  return fetch(request)
+    .then(function (response) {
+      saveCopy(request, response);
       return response;
+    })
+    .catch(function () {
+      return caches.match(request, { ignoreSearch: true }).then(function (cached) {
+        return cached || caches.match("/");
+      });
     });
+}
+
+function apiStrategy(request) {
+  return fetch(request, { signal: AbortSignal.timeout(API_TIMEOUT_MS) })
+    .then(function (response) {
+      saveCopy(request, response);
+      return response;
+    })
+    .catch(function () {
+      return caches.match(request).then(function (cached) {
+        if (!cached) {
+          // 503 y no 200: una lista vacía parecería "no hubo sismos"
+          return new Response(JSON.stringify({ offline: true, error: "Sin conexi\u00f3n" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        var headers = new Headers(cached.headers);
+        headers.set("X-SW-Cached", "1");
+        return new Response(cached.body, { status: cached.status, headers: headers });
+      });
+    });
+}
+
+function tileStrategy(request) {
+  return caches.open(TILE_CACHE).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      if (cached) return cached;
+      return fetch(request).then(function (response) {
+        if (response.ok) {
+          cache.put(request, response.clone()).then(function () {
+            return trimTiles(cache);
+          });
+        }
+        return response;
+      });
+    });
+  });
+}
+
+function trimTiles(cache) {
+  return cache.keys().then(function (keys) {
+    var excess = keys.slice(0, Math.max(0, keys.length - MAX_TILES));
+    return Promise.all(
+      excess.map(function (key) {
+        return cache.delete(key);
+      })
+    );
   });
 }
 
@@ -141,57 +189,8 @@ function cacheFirst(request) {
   return caches.match(request).then(function (cached) {
     if (cached) return cached;
     return fetch(request).then(function (response) {
-      if (response.ok) {
-        var copy = response.clone();
-        caches.open(CACHE).then(function (cache) {
-          cache.put(request, copy);
-        });
-      }
+      saveCopy(request, response);
       return response;
     });
-  });
-}
-
-function networkFirst(request) {
-  return fetch(request)
-    .then(function (response) {
-      if (response.ok) {
-        var copy = response.clone();
-        caches.open(CACHE).then(function (cache) {
-          cache.put(request, copy);
-        });
-      }
-      return response;
-    })
-    .catch(function () {
-      return caches.match(request).then(function (cached) {
-        if (cached) return cached;
-        return new Response(
-          JSON.stringify({ offline: true, error: "Sin conexi\u00f3n" }),
-          { headers: { "Content-Type": "application/json" } }
-        );
-      });
-    });
-}
-
-// ── IndexedDB tile storage (async, fire-and-forget) ──────────────────────────
-function storeTileInIDB(url, response) {
-  // IndexedDB is not directly available in SW scope with all browsers,
-  // so we store the blob reference. The main thread reads from IDB.
-  // For production, use the 'idb' library with the SW.
-  response.blob().then(function (blob) {
-    var openReq = indexedDB.open("sismoscr-tiles", 1);
-    openReq.onupgradeneeded = function () {
-      var db = openReq.result;
-      if (!db.objectStoreNames.contains("tiles")) {
-        db.createObjectStore("tiles", { keyPath: "url" });
-      }
-    };
-    openReq.onsuccess = function () {
-      var db = openReq.result;
-      var tx = db.transaction("tiles", "readwrite");
-      var store = tx.objectStore("tiles");
-      store.put({ url: url, blob: blob, timestamp: Date.now() });
-    };
   });
 }

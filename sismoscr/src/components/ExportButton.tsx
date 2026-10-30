@@ -1,7 +1,6 @@
 "use client";
 
 import { Earthquake } from "@/types";
-import { formatDateTime } from "@/lib/utils";
 
 export function ExportButton({ earthquakes }: { earthquakes: Earthquake[] }) {
   const toCSV = () => {

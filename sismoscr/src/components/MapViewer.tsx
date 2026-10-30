@@ -8,12 +8,12 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import { Earthquake } from "@/types";
-import { getMagnitudeColor, getMagnitudeSize, getStatusFromDate, formatDateTime } from "@/lib/utils";
+import { ApiEarthquake, Earthquake } from "@/types";
+import { getMagnitudeColor, getMagnitudeSize } from "@/lib/utils";
 import { EarthquakeTooltip } from "./EarthquakeTooltip";
 import { RealTimeAlert } from "./RealTimeAlert";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { API_URL } from "@/lib/api";
+import { apiFetch, isOfflineCopy, toEarthquake } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useSearchParams } from "next/navigation";
 
@@ -22,6 +22,11 @@ const CR_BOUNDS: [[number, number], [number, number]] = [
   [8.0, -86.0],
   [11.5, -82.0],
 ];
+const POLL_MS = 60000;
+
+// Evita rehacer todos los marcadores si el sondeo no trajo cambios
+const quakesKey = (list: Earthquake[]) =>
+  list.map((e) => `${e.id}:${e.magnitude}:${e.status}`).join();
 
 function MapController({
   onReady,
@@ -115,79 +120,56 @@ export function MapViewer() {
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const { alert, dismissAlert } = useWebSocket();
+  const [offlineCopy, setOfflineCopy] = useState(false);
+  const { alert, isConnected, dismissAlert } = useWebSocket();
   const mapRef = useRef<L.Map | null>(null);
+  const handledEqRef = useRef<string | null>(null);
+  const highlightedId = searchParams.get("eq");
 
   const fetchEarthquakes = useCallback(() => {
-    setError(null);
-    fetch(`${API_URL}/earthquakes/history?per_page=200`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(_t("error.api").replace("{code}", String(r.status)))))
-      .then((res) => {
-        const mapped: Earthquake[] = (res.data || []).map((eq: any) => ({
-          id: eq.id,
-          magnitude: eq.magnitude,
-          depth: eq.depth_km,
-          location: eq.location_description || "Desconocida",
-          latitude: eq.latitude,
-          longitude: eq.longitude,
-          datetime: eq.occurred_at,
-          province: eq.province || "No especificada",
-          status: getStatusFromDate(eq.occurred_at),
-        }));
-        setEarthquakes(mapped);
+    apiFetch("/earthquakes/history?per_page=200")
+      .then(async (r) => {
+        if (!r.ok) {
+          return Promise.reject(
+            r.status === 503 ? _t("error.connection") : _t("error.api").replace("{code}", String(r.status))
+          );
+        }
+        const res: { data?: ApiEarthquake[] } = await r.json();
+        const mapped = (res.data || []).map(toEarthquake);
+        setEarthquakes((prev) => (quakesKey(prev) === quakesKey(mapped) ? prev : mapped));
+        setOfflineCopy(isOfflineCopy(r));
+        setError(null);
         setLoading(false);
       })
       .catch((err) => {
         setError(typeof err === "string" ? err : _t("error.connection"));
         setLoading(false);
       });
-  }, []);
+  }, [_t]);
 
   useEffect(() => {
     fetchEarthquakes();
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchEarthquakes();
+    }, POLL_MS);
+    return () => clearInterval(interval);
   }, [fetchEarthquakes]);
 
-  // Handle ?eq=ID from history click: fetch detail, fly, show highlight
+  // ?eq=ID desde el historial: se atiende una sola vez, los sondeos no deben reabrir el modal
   useEffect(() => {
-    const eqId = searchParams.get("eq");
-    if (!eqId) return;
+    if (!highlightedId || handledEqRef.current === highlightedId) return;
+    handledEqRef.current = highlightedId;
 
-    setHighlightedId(eqId);
-
-    // Check if already in local list
-    const local = earthquakes.find((e) => e.id === eqId);
-    if (local) {
-      setSelectedEarthquake(local);
-      if (mapRef.current) {
-        mapRef.current.flyTo([local.latitude, local.longitude], 10, { duration: 1.5 });
-      }
-      return;
-    }
-
-    // Fetch detail from API
-    fetch(`${API_URL}/earthquakes/${eqId}`)
-      .then((r) => (r.ok ? r.json() : null))
+    apiFetch(`/earthquakes/${encodeURIComponent(highlightedId)}`)
+      .then((r) => (r.ok ? (r.json() as Promise<ApiEarthquake>) : null))
       .then((data) => {
         if (!data) return;
-        const eq: Earthquake = {
-          id: data.id,
-          magnitude: data.magnitude,
-          depth: data.depth_km,
-          location: data.location_description || "Desconocida",
-          latitude: data.latitude,
-          longitude: data.longitude,
-          datetime: data.occurred_at,
-          province: data.province || "No especificada",
-          status: getStatusFromDate(data.occurred_at),
-        };
+        const eq = toEarthquake(data);
         setSelectedEarthquake(eq);
-        if (mapRef.current) {
-          mapRef.current.flyTo([eq.latitude, eq.longitude], 10, { duration: 1.5 });
-        }
+        mapRef.current?.flyTo([eq.latitude, eq.longitude], 10, { duration: 1.5 });
       })
       .catch(() => {});
-  }, [searchParams, earthquakes]);
+  }, [highlightedId]);
 
   const handleMapReady = useCallback((map: L.Map) => {
     mapRef.current = map;
@@ -199,6 +181,7 @@ export function MapViewer() {
 
   useEffect(() => {
     if (alert) {
+      fetchEarthquakes();
       if (mapRef.current) {
         mapRef.current.flyTo([alert.latitude, alert.longitude], 8, {
           duration: 1.5,
@@ -209,7 +192,7 @@ export function MapViewer() {
         setTimeout(() => document.body.classList.remove("shake"), 500);
       }
     }
-  }, [alert]);
+  }, [alert, fetchEarthquakes]);
 
   const stats = {
     total: earthquakes.length,
@@ -253,6 +236,11 @@ export function MapViewer() {
               <span className="font-bold">{stats.maxMag.toFixed(1)}</span>
             </div>
           </div>
+          <p role="status" className="mt-3 pt-2 border-t border-gray-200/60 text-xs font-semibold text-text-muted">
+            {isConnected ? _t("map.live") : _t("map.reconnecting")}
+            {offlineCopy && <span className="block font-normal">{_t("map.offlineCopy")}</span>}
+          </p>
+          <p className="mt-1 max-w-[160px] text-[11px] leading-snug text-text-muted">{_t("map.disclaimer")}</p>
         </motion.div>
       </div>
 
@@ -270,7 +258,10 @@ export function MapViewer() {
           <p className="text-cr-red text-sm font-semibold mb-2">{_t("map.error.title")}</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
           <button
-            onClick={fetchEarthquakes}
+            onClick={() => {
+              setError(null);
+              fetchEarthquakes();
+            }}
             className="w-full py-1.5 rounded-xl bg-cr-red text-white text-sm font-semibold hover:bg-cr-red-light transition-colors"
           >
             {_t("map.error.retry")}
@@ -290,8 +281,9 @@ export function MapViewer() {
         zoomControl={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          crossOrigin={true}
         />
         <MapController onReady={handleMapReady} />
         <EarthquakesLayer

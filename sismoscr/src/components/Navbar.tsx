@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const _t = useT();
   const currentLang = useLang();
 
@@ -23,12 +24,12 @@ export function Navbar() {
       // No secuestrar teclas mientras se escribe ni combinaciones del navegador
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if ((e.target as HTMLElement).closest("input, textarea, select")) return;
-      if (e.key === "m" || e.key === "M") window.location.href = "/";
-      if (e.key === "h" || e.key === "H") window.location.href = "/history";
+      if (e.key === "m" || e.key === "M") router.push("/");
+      if (e.key === "h" || e.key === "H") router.push("/history");
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [router]);
 
   const toggleLang = () => {
     setLang(currentLang === "es" ? "en" : "es");

@@ -1,6 +1,6 @@
 /*
  * Optimized Next.js config for SismosCR.
- * - image optimization: remote patterns for Leaflet tiles
+ * - images: optimizador desactivado; la app no usa next/image
  * - compression: enabled in production
  * - security headers: X-Content-Type-Options, X-Frame-Options, etc.
  */
@@ -28,16 +28,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Remote images for Leaflet tile attribution
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.basemaps.cartocdn.com",
-      },
-    ],
-  },
-
+  images: { unoptimized: true },
 };
 
 export default nextConfig;

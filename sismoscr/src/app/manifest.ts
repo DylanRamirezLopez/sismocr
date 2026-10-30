@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SismosCR — Monitoreo Sísmico Costa Rica",
     short_name: "SismosCR",
-    description: "Monitoreo y alerta temprana de sismos en Costa Rica. Funciona offline.",
+    description: "Monitoreo de sismos en Costa Rica. No es un sistema de alerta temprana.",
     start_url: "/",
     display: "standalone",
     background_color: "#F8F9FA",

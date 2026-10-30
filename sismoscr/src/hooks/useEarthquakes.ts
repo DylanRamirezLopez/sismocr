@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Earthquake, FilterState, SortField, SortDirection } from "@/types";
-import { getStatusFromDate } from "@/lib/utils";
-import { API_URL } from "@/lib/api";
+import { ApiEarthquake, Earthquake, FilterState, SortField, SortDirection } from "@/types";
+import { apiFetch, isOfflineCopy, toEarthquake } from "@/lib/api";
 
 export function useEarthquakes() {
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FilterState>({
+  const [offlineCopy, setOfflineCopy] = useState(false);
+  const [filters, setFiltersState] = useState<FilterState>({
     dateFrom: "",
     dateTo: "",
     minMagnitude: 0,
@@ -21,28 +21,19 @@ export function useEarthquakes() {
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 20;
 
-  const fetchData = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/earthquakes/history?per_page=200`);
-      if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-      const json = await res.json();
-      const mapped: Earthquake[] = (json.data || []).map((eq: any) => ({
-        id: eq.id,
-        magnitude: eq.magnitude,
-        depth: eq.depth_km,
-        location: eq.location_description || "Desconocida",
-        latitude: eq.latitude,
-        longitude: eq.longitude,
-        datetime: eq.occurred_at,
-        province: eq.province || "No especificada",
-        status: getStatusFromDate(eq.occurred_at),
-      }));
-      setEarthquakes(mapped);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error de conexión");
-    }
-    setLoading(false);
+  const fetchData = useCallback(() => {
+    apiFetch("/earthquakes/history?per_page=200")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+        const json: { data?: ApiEarthquake[] } = await res.json();
+        setEarthquakes((json.data || []).map(toEarthquake));
+        setOfflineCopy(isOfflineCopy(res));
+        setError(null);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Error de conexión");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -72,9 +63,14 @@ export function useEarthquakes() {
   }, [earthquakes, filters, sortField, sortDirection]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
-  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+  // Una recarga puede dejar menos páginas que la actual
+  const page = Math.min(currentPage, Math.max(1, totalPages));
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  useEffect(() => { setCurrentPage(1); }, [filters]);
+  const setFilters = (update: (prev: FilterState) => FilterState) => {
+    setFiltersState(update);
+    setCurrentPage(1);
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -93,7 +89,7 @@ export function useEarthquakes() {
   return {
     earthquakes: paginated,
     totalPages,
-    currentPage,
+    currentPage: page,
     setCurrentPage,
     filters,
     setFilters,
@@ -105,6 +101,7 @@ export function useEarthquakes() {
     totalFiltered: filtered.length,
     loading,
     error,
+    offlineCopy,
     refetch: fetchData,
   };
 }

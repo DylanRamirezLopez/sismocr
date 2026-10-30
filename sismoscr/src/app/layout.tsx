@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "SismosCR — Monitoreo Sísmico en Tiempo Real",
   description:
-    "Plataforma de monitoreo y alerta temprana de sismos en Costa Rica. Datos en tiempo real, historial interactivo y sistema de notificaciones.",
+    "Monitoreo de sismos en Costa Rica con datos de USGS, RSN y OVSICORI. Los datos llegan minutos después del evento: no es un sistema de alerta temprana.",
   keywords: ["sismos", "Costa Rica", "terremotos", "monitoreo", "alertas"],
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "SismosCR", statusBarStyle: "black-translucent" },

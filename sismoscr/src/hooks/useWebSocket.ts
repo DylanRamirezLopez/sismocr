@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { EarthquakeAlert } from "@/types";
 import { WS_URL } from "@/lib/api";
-const MAX_RETRIES = 10;
 const BASE_DELAY = 1000;
 
 export function useWebSocket() {
@@ -23,7 +22,6 @@ export function useWebSocket() {
 
     function connect() {
       if (!mountedRef.current) return;
-      if (retriesRef.current >= MAX_RETRIES) return;
 
       ws = new WebSocket(WS_URL);
       wsRef.current = ws;
@@ -55,10 +53,9 @@ export function useWebSocket() {
         setIsConnected(false);
         if (mountedRef.current) {
           retriesRef.current++;
-          if (retriesRef.current < MAX_RETRIES) {
-            const delay = Math.min(BASE_DELAY * Math.pow(2, retriesRef.current - 1), 30000);
-            reconnectTimer = setTimeout(connect, delay);
-          }
+          const delay = Math.min(BASE_DELAY * Math.pow(2, retriesRef.current - 1), 30000);
+          // Jitter: tras una caída no deben reconectar todos a la vez
+          reconnectTimer = setTimeout(connect, delay * (0.5 + Math.random() * 0.5));
         }
       };
 
@@ -66,6 +63,16 @@ export function useWebSocket() {
     }
 
     connect();
+
+    // Al volver la red no se espera el backoff completo
+    const handleOnline = () => {
+      if (wsRef.current?.readyState === WebSocket.CLOSED) {
+        clearTimeout(reconnectTimer);
+        retriesRef.current = 0;
+        connect();
+      }
+    };
+    window.addEventListener("online", handleOnline);
 
     pingRef.current = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -77,6 +84,7 @@ export function useWebSocket() {
       mountedRef.current = false;
       clearTimeout(reconnectTimer);
       clearInterval(pingRef.current!);
+      window.removeEventListener("online", handleOnline);
       ws?.close();
     };
   }, []);
