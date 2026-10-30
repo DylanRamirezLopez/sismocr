@@ -40,8 +40,6 @@ async def lifespan(app: FastAPI):
     await init_redis()
 
     async with engine.begin() as conn:
-        # Drop and recreate to pick up schema changes (safe while DB is empty)
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     asyncio.create_task(alert_manager.heartbeat())
@@ -97,6 +95,9 @@ async def health():
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    # /health no consume cuota: un 429 aquí haría que Render reinicie el servicio
+    if request.url.path == "/health":
+        return await call_next(request)
     client_ip = request.client.host if request.client else "unknown"
     now = time.time()
     window = 60

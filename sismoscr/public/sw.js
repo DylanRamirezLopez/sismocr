@@ -10,8 +10,8 @@
  *   IndexedDB can store hundreds of MBs, enough for offline CR map tiles.
  */
 
-var CACHE = "sismoscr-v1";
-var STATIC_ASSETS = ["/", "/history", "/offline"];
+var CACHE = "sismoscr-v2";
+var STATIC_ASSETS = ["/", "/history"];
 
 // ── Install: precache shell ──────────────────────────────────────────────────
 self.addEventListener("install", function (event) {
@@ -92,6 +92,14 @@ self.addEventListener("notificationclick", function (event) {
 self.addEventListener("fetch", function (event) {
   var request = event.request;
   var url = new URL(request.url);
+
+  if (request.method !== "GET") return;
+
+  // HTML: red primero para no congelar una versión vieja de la app
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(request));
+    return;
+  }
 
   // Map tiles: cache-first with IndexedDB
   if (url.hostname.indexOf("basemaps.cartocdn.com") !== -1) {

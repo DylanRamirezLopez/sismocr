@@ -49,10 +49,13 @@ async def get_history(
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
 ):
-    quakes, total = await svc.get_history(
-        db, page, per_page, min_magnitude, max_magnitude,
-        date_from, date_to, province, sort_by, sort_order,
-    )
+    try:
+        quakes, total = await svc.get_history(
+            db, page, per_page, min_magnitude, max_magnitude,
+            date_from, date_to, province, sort_by, sort_order,
+        )
+    except ValueError:
+        raise HTTPException(400, detail="Invalid date format. Use ISO8601.")
     return EarthquakeListResponse(
         data=[EarthquakeResponse.model_validate(q) for q in quakes],
         total=total,

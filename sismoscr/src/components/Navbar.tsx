@@ -20,6 +20,9 @@ export function Navbar() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // No secuestrar teclas mientras se escribe ni combinaciones del navegador
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.target as HTMLElement).closest("input, textarea, select")) return;
       if (e.key === "m" || e.key === "M") window.location.href = "/";
       if (e.key === "h" || e.key === "H") window.location.href = "/history";
     };

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-cr-navy: #002B7F;
   --color-cr-navy-light: #0039A6;

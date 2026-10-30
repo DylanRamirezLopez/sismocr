@@ -72,7 +72,7 @@ export function EarthquakeHistoryTable() {
         <div>
           <h1 className="text-3xl font-bold text-cr-navy dark:text-white">{_t("history.title")}</h1>
           <p className="text-text-muted mt-1">
-            {totalFiltered} {_t("history.events")} · {new Date().toLocaleDateString("es-CR")}
+            {totalFiltered} {_t("history.events")}
           </p>
         </div>
         <ExportButton earthquakes={earthquakes} />

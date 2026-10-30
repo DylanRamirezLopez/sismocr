@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 
 class EarthquakeBase(BaseModel):
     external_id: str
-    magnitude: float = Field(..., ge=0, le=10)
-    depth_km: float = Field(..., ge=0)
+    # USGS publica profundidades y magnitudes negativas válidas
+    magnitude: float = Field(..., le=10)
+    depth_km: float
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     location_description: Optional[str] = None
