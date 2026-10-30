@@ -1,15 +1,27 @@
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.pool import NullPool
 from app.config import settings
 
-# Render's fromDatabase returns postgresql:// without +asyncpg.
-# Fix: ensure async driver is used for Postgres URLs.
-_db_url = settings.database_url
-if _db_url.startswith("postgresql://") and "+" not in _db_url.split("://")[0]:
-    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+def normalize_database_url(raw: str) -> URL:
+    """Adapta URLs de proveedores (Render, Neon) al driver asyncpg."""
+    url = make_url(raw)
+    if url.drivername in ("postgres", "postgresql"):
+        url = url.set(drivername="postgresql+asyncpg")
+    if url.drivername == "postgresql+asyncpg":
+        # asyncpg usa `ssl` y no reconoce los parámetros libpq que traen estas URLs
+        query = dict(url.query)
+        query.pop("channel_binding", None)
+        sslmode = query.pop("sslmode", None)
+        if sslmode:
+            query["ssl"] = sslmode
+        url = url.set(query=query)
+    return url
+
 
 engine = create_async_engine(
-    _db_url,
+    normalize_database_url(settings.database_url),
     poolclass=NullPool,
     echo=settings.debug,
 )

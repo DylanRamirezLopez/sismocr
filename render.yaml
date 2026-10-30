@@ -1,13 +1,6 @@
-# Render Blueprint — auto-deploy API + PostgreSQL
+# Render Blueprint — auto-deploy API
 # Worker runs as background task inside the API (free tier compatible)
-databases:
-  - name: sismocr-db
-    databaseName: sismocr
-    user: sismocr
-    plan: free
-    region: oregon
-    ipAllowList: []
-
+# La BD está fuera de Render: su plan gratuito se borra a los 30 días más 14 de gracia
 services:
   - type: web
     name: sismocr-api
@@ -21,9 +14,7 @@ services:
     autoDeploy: true
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: sismocr-db
-          property: connectionString
+        sync: false
       - key: DEBUG
         value: "false"
       - key: LOG_LEVEL
