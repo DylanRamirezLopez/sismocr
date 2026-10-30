@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render API health endpoint
-        run: curl -s -o /dev/null -w "%{http_code}" https://sismocr-api.onrender.com/health
+        run: curl -sS --fail --max-time 90 -o /dev/null -w "%{http_code}" https://sismocr-api.onrender.com/health

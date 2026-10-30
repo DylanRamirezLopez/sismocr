@@ -51,15 +51,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio ruff
+          pip install ruff==0.17.3
 
       - name: Lint with ruff
-        run: ruff check app/ tests/ --ignore=E501
+        run: ruff check app/ tests/
 
       - name: Test with pytest
         run: python -m pytest tests/ -v
         env:
-          DATABASE_URL: postgresql+asyncpg://sismocr:${{ secrets.POSTGRES_PASSWORD || 'ci_temp_pass' }}@localhost:5432/sismocr
+          TEST_DATABASE_URL: postgresql+asyncpg://sismocr:${{ secrets.POSTGRES_PASSWORD || 'ci_temp_pass' }}@localhost:5432/sismocr
           REDIS_URL: redis://localhost:6379/0
 
   frontend:
@@ -86,3 +86,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Build
+        run: npm run build
