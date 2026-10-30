@@ -10,18 +10,15 @@ immediately — no client-side processing, no blocking the UI thread.
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import datetime, timezone
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.earthquake import Earthquake
 from app.services import earthquake_service as svc
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
 )

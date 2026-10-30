@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, func, and_
@@ -175,7 +174,8 @@ async def get_earthquake_detail(
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await alert_manager.register(websocket)
+    if not await alert_manager.register(websocket):
+        return
     try:
         while True:
             data = await websocket.receive_text()

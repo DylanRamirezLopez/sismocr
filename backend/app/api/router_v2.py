@@ -7,19 +7,16 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models.earthquake import Earthquake
 from app.redis_client import get_redis
 from app.schemas.earthquake import EarthquakeResponse, EarthquakeListResponse
-from app.services.alert_manager import alert_manager
 from app.services import earthquake_service as svc
 
 logger = logging.getLogger("sismocr.api.v2")

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text, Enum as SAEnum
+from sqlalchemy import DateTime, Float, String, Text, Enum as SAEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs
 import enum

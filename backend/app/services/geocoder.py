@@ -33,6 +33,8 @@ def _load_geo():
             # GeoJSON coords are [lon, lat]
             rings = geom["coordinates"]
             polygons.append((name, rings))
+        elif geom.get("type") == "MultiPolygon":
+            polygons.extend((name, rings) for rings in geom["coordinates"])
     _province_polygons = polygons
     logger.info("Loaded %d province polygons", len(polygons))
 

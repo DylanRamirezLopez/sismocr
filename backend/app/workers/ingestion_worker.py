@@ -55,7 +55,7 @@ async def process_quake_batch(quakes: list[RawQuakeData], db: AsyncSession):
     # Un sondeo repite los mismos eventos: lo ya guardado no se reprocesa ni se realerta
     unique = {q.external_id: q for q in quakes}
     known = set(
-        (await db.execute(select(Earthquake.external_id).where(Earthquake.external_id.in_(unique)))).scalars()
+        (await db.execute(select(Earthquake.external_id).where(Earthquake.external_id.in_(list(unique))))).scalars()
     )
 
     raw_new: list[RawQuakeData] = []

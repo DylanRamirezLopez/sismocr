@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta, timezone
+from datetime import timedelta
 from math import cos, radians
 from typing import Optional
 
