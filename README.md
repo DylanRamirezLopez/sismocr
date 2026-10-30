@@ -127,7 +127,7 @@ python scripts/ci_local.py --publish
 |-----------|-----------|-----|
 | Frontend (Next.js) | Vercel (Free) | [sismoscr.vercel.app](https://sismoscr.vercel.app) |
 | Backend (FastAPI) | Render (Free) | [sismocr-api.onrender.com](https://sismocr-api.onrender.com) |
-| PostgreSQL | Render (Free) | 1 GB incluido |
+| PostgreSQL | Neon (Free) | 1 GB, sin caducidad |
 | CI + Keep Alive | GitHub Actions (Free) | cada 10 min |
 
 **Keep Alive:** Render Free duerme tras 15 min sin tráfico. Un workflow de GitHub Actions pingea `/health` cada 10 minutos para mantenerlo despierto.
