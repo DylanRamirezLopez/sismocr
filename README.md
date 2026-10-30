@@ -112,6 +112,15 @@ cd sismoscr && npm run build                 # Production build
 cd sismoscr && npx playwright test           # E2E critical flows
 ```
 
+### CI local gratuito
+
+Ejecuta lo mismo que GitHub Actions en tu equipo, incluido PostgreSQL embebido, sin Docker ni minutos de Actions. Con `--publish`, el resultado aparece en el PR como `local/backend` y `local/frontend`.
+
+```bash
+pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+python scripts/ci_local.py --publish
+```
+
 ##  Despliegue
 
 | Componente | Plataforma | URL |
