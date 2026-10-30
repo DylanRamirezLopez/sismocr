@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Earthquake } from "@/types";
 import { formatDateTime, getMagnitudeColor } from "@/lib/utils";
 import { useT } from "@/lib/i18n";

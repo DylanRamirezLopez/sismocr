@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/Navbar";
-import { CitizenReport } from "@/components/CitizenReport";
 import { PreparednessChecklist } from "@/components/PreparednessChecklist";
 import { EduCards } from "@/components/EduCards";
 import { HelpModal } from "@/components/HelpModal";
@@ -27,7 +26,6 @@ export default function HomePage() {
     <>
       <Navbar />
       <MapViewer />
-      <CitizenReport />
       <PreparednessChecklist />
       <EduCards />
       <HelpModal />

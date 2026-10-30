@@ -4,7 +4,7 @@
  * Why: Users opt in once, then receive real-time quake alerts even with the app closed.
  * The SW handles the push event and shows a notification with magnitude + location.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { API_BASE } from "@/lib/api";
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -23,18 +23,19 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 // Generate: npx web-push generate-vapid-keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_KEY || "";
 
+const noSubscribe = () => () => {};
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window;
+
 export function PushNotificationManager() {
-  const [supported, setSupported] = useState(false);
+  const supported = useSyncExternalStore(noSubscribe, pushSupported, () => false);
   const [subscribed, setSubscribed] = useState(false);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      setSupported(true);
-      navigator.serviceWorker.ready.then((reg) =>
-        reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
-      );
-    }
-  }, []);
+    if (!supported) return;
+    navigator.serviceWorker.ready.then((reg) =>
+      reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
+    );
+  }, [supported]);
 
   const subscribe = async () => {
     const reg = await navigator.serviceWorker.ready;

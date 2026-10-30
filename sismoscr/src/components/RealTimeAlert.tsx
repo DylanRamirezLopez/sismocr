@@ -17,6 +17,7 @@ export function RealTimeAlert({ alert, onDismiss }: RealTimeAlertProps) {
       {alert && (
         <motion.div
           key={alert.id}
+          role="alert"
           initial={{ x: 400, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 400, opacity: 0 }}
@@ -41,7 +42,7 @@ export function RealTimeAlert({ alert, onDismiss }: RealTimeAlertProps) {
                   />
                   <div>
                     <h3 className="font-bold text-cr-red text-sm uppercase tracking-wider">
-                      ⚠ Alerta Sísmica
+                      {_t("alert.title")}
                     </h3>
                     <p className="text-xs text-text-muted">{_t("alert.detected")}</p>
                   </div>
@@ -89,6 +90,8 @@ export function RealTimeAlert({ alert, onDismiss }: RealTimeAlertProps) {
                   </span>
                 </div>
               </div>
+
+              <p className="mt-3 text-xs text-text-muted">{_t("map.disclaimer")}</p>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}

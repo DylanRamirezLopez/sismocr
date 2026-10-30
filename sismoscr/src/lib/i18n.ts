@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 export type Lang = "es" | "en";
-
-let ssrLang: Lang = "es";
 
 const dict: Record<Lang, Record<string, string>> = {
   es: {
@@ -12,13 +10,12 @@ const dict: Record<Lang, Record<string, string>> = {
     "app.subtitle": "Monitoreo Sísmico",
     "nav.map": "Mapa en Vivo",
     "nav.history": "Historial",
-    "nav.report": "Reportar",
     "nav.checklist": "Preparación",
     "nav.learn": "Aprender",
     "stats.total": "Total",
     "stats.active": "Activos",
     "stats.maxMag": "Max Mag",
-    "alert.title": "Alerta Sísmica",
+    "alert.title": "Sismo registrado",
     "alert.subtitle": "Nuevo sismo detectado",
     "alert.dismiss": "Entendido",
     "tooltip.detected": "Sismo Detectado",
@@ -50,14 +47,6 @@ const dict: Record<Lang, Record<string, string>> = {
     "history.pagination.next": "Siguiente",
     "history.export.csv": "CSV",
     "history.export.geojson": "GeoJSON",
-    "report.title": "Reportar Intensidad",
-    "report.subtitle": "¿Cómo sentiste el último sismo?",
-    "report.location": "Tu ubicación",
-    "report.intensity": "Intensidad percibida",
-    "report.comment": "Comentario (opcional)",
-    "report.submit": "Enviar reporte",
-    "report.thanks": "¡Gracias! Tu reporte ayuda a todos.",
-    "report.view": "Ver reportes ciudadanos",
     "intensity.1": "No se sintió",
     "intensity.2": "Débil",
     "intensity.3": "Leve",
@@ -88,6 +77,10 @@ const dict: Record<Lang, Record<string, string>> = {
     "map.error.title": "Error al cargar datos",
     "map.error.retry": "Reintentar",
     "map.error.connection": "Error de conexión",
+    "map.live": "● En vivo",
+    "map.reconnecting": "○ Reconectando…",
+    "map.offlineCopy": "Sin conexión: datos guardados",
+    "map.disclaimer": "Datos con minutos de retraso. No es alerta temprana.",
 
     "history.loading": "Cargando historial...",
     "history.error.title": "Error al cargar historial",
@@ -116,13 +109,12 @@ const dict: Record<Lang, Record<string, string>> = {
     "app.subtitle": "Seismic Monitoring",
     "nav.map": "Live Map",
     "nav.history": "History",
-    "nav.report": "Report",
     "nav.checklist": "Preparedness",
     "nav.learn": "Learn",
     "stats.total": "Total",
     "stats.active": "Active",
     "stats.maxMag": "Max Mag",
-    "alert.title": "Earthquake Alert",
+    "alert.title": "Earthquake recorded",
     "alert.subtitle": "New earthquake detected",
     "alert.dismiss": "Got it",
     "tooltip.detected": "Quake Detected",
@@ -154,14 +146,6 @@ const dict: Record<Lang, Record<string, string>> = {
     "history.pagination.next": "Next",
     "history.export.csv": "CSV",
     "history.export.geojson": "GeoJSON",
-    "report.title": "Report Intensity",
-    "report.subtitle": "How did you feel the last quake?",
-    "report.location": "Your location",
-    "report.intensity": "Perceived intensity",
-    "report.comment": "Comment (optional)",
-    "report.submit": "Submit report",
-    "report.thanks": "Thanks! Your report helps everyone.",
-    "report.view": "View citizen reports",
     "intensity.1": "Not felt",
     "intensity.2": "Weak",
     "intensity.3": "Light",
@@ -192,6 +176,10 @@ const dict: Record<Lang, Record<string, string>> = {
     "map.error.title": "Error loading data",
     "map.error.retry": "Retry",
     "map.error.connection": "Connection error",
+    "map.live": "● Live",
+    "map.reconnecting": "○ Reconnecting…",
+    "map.offlineCopy": "Offline: saved data",
+    "map.disclaimer": "Data is minutes behind. This is not an early warning.",
 
     "history.loading": "Loading history...",
     "history.error.title": "Error loading history",
@@ -225,40 +213,29 @@ function getStoredLang(): Lang {
 }
 
 export function getLang(): Lang {
-  if (typeof window !== "undefined") return getStoredLang();
-  return ssrLang;
+  return getStoredLang();
 }
 
 export function setLang(lang: Lang) {
-  ssrLang = lang;
-  if (typeof window !== "undefined") {
-    localStorage.setItem("sismoscr-lang", lang);
-    document.documentElement.lang = lang;
-    window.dispatchEvent(new Event("langchange"));
-  }
+  localStorage.setItem("sismoscr-lang", lang);
+  document.documentElement.lang = lang;
+  window.dispatchEvent(new Event("langchange"));
 }
 
 export function t(key: string): string {
   return dict[getLang()][key] ?? key;
 }
 
+function subscribeLang(onChange: () => void) {
+  window.addEventListener("langchange", onChange);
+  return () => window.removeEventListener("langchange", onChange);
+}
+
 export function useLang(): Lang {
-  const [lang, setLangState] = useState<Lang>(ssrLang);
-  useEffect(() => {
-    const stored = getStoredLang();
-    if (stored !== lang) setLangState(stored);
-    const handler = () => {
-      const current = getStoredLang();
-      ssrLang = current;
-      setLangState(current);
-    };
-    window.addEventListener("langchange", handler);
-    return () => window.removeEventListener("langchange", handler);
-  }, [lang]);
-  return lang;
+  return useSyncExternalStore(subscribeLang, getStoredLang, () => "es");
 }
 
 export function useT() {
   const lang = useLang();
-  return (key: string) => dict[lang][key] ?? key;
+  return useCallback((key: string) => dict[lang][key] ?? key, [lang]);
 }

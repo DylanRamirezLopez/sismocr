@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 from app.schemas.earthquake import (
     EarthquakeAlertPayload,
     EarthquakeCreate,
-    EarthquakeResponse,
-    EarthquakeListResponse,
     ErrorResponse,
 )
 

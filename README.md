@@ -11,6 +11,8 @@
 
 ---
 
+> **Aviso:** SismosCR informa de sismos minutos después de ocurrir. No es un sistema de alerta temprana.
+
 ##  Fuentes de datos
 
 | Fuente | Método | Intervalo | Cobertura |
@@ -60,13 +62,14 @@ v1 queda 100% intacta para compatibilidad. v2 usa el mismo `earthquake_service.p
 
 | Recurso | Estrategia | Razón |
 |---------|-----------|-------|
-| Map tiles (cartocdn.com) | Cache-first + IndexedDB | El mapa debe verse sin conexión |
-| API calls (/api/) | Network-first | Datos frescos优先, fallback a cache |
-| Static assets | Cache-first | Pre-cargados en install |
+| Map tiles (openstreetmap.org) | Cache-first (máx. 1000) | El mapa debe verse sin conexión |
+| API calls (/api/) | Network-first | Datos frescos; sin red, copia marcada como guardada |
+| HTML | Network-first | No congelar versiones viejas |
+| Static assets | Cache-first | Archivos con hash |
 
-### Reverse geocoding offline con polígonos del INEC
+### Reverse geocoding offline
 
-**Por qué:** Evitar llamadas a APIs de pago (Google Maps, Mapbox). Usamos Ray Casting sobre un GeoJSON simplificado de las 7 provincias de CR. 0 llamadas externas, 0 latencia, 0 costo.
+**Por qué:** Evitar llamadas a APIs de pago (Google Maps, Mapbox). Usamos Ray Casting sobre un GeoJSON simplificado de las 7 provincias de CR, derivado de OpenStreetMap (ver `backend/data/README.md`). 0 llamadas externas, 0 latencia, 0 costo.
 
 ### Deduplicación con Haversine vs PostGIS
 
@@ -103,10 +106,19 @@ start cmd /c "cd sismoscr && npm run dev"
 ##  Tests
 
 ```bash
-cd backend && python -m pytest tests/ -v    # 22 tests
+cd backend && python -m pytest tests/ -v
 cd sismoscr && npx tsc --noEmit              # TypeScript strict
 cd sismoscr && npm run build                 # Production build
 cd sismoscr && npx playwright test           # E2E critical flows
+```
+
+### CI local gratuito
+
+Ejecuta lo mismo que GitHub Actions en tu equipo, incluido PostgreSQL embebido, sin Docker ni minutos de Actions. Con `--publish`, el resultado aparece en el PR como `local/backend` y `local/frontend`.
+
+```bash
+pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+python scripts/ci_local.py --publish
 ```
 
 ##  Despliegue

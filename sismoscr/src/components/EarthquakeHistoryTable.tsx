@@ -13,7 +13,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { SortField, FilterState } from "@/types";
+import { SortField } from "@/types";
 import { formatDateTime, getMagnitudeColor, cn } from "@/lib/utils";
 import { useEarthquakes } from "@/hooks/useEarthquakes";
 import { ExportButton } from "./ExportButton";
@@ -39,18 +39,31 @@ export function EarthquakeHistoryTable() {
     error,
     refetch,
     allEarthquakes,
+    offlineCopy,
   } = useEarthquakes();
 
   const chartData = React.useMemo(() => {
     const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Set","Oct","Nov","Dic"];
-    const counts: Record<string, number> = {};
-    months.forEach((m) => { counts[m] = 0; });
+    const buckets = new Map<string, { month: string; count: number; sum: number }>();
     allEarthquakes.forEach((eq) => {
       const d = new Date(eq.datetime);
-      const m = months[d.getMonth()];
-      if (m) counts[m] = (counts[m] || 0) + 1;
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+      const bucket = buckets.get(key) ?? {
+        month: `${months[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+        count: 0,
+        sum: 0,
+      };
+      bucket.count += 1;
+      bucket.sum += eq.magnitude;
+      buckets.set(key, bucket);
     });
-    return months.filter((m) => counts[m] > 0).map((month) => ({ month, count: counts[month], avgMagnitude: 3.0 }));
+    return [...buckets.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, b]) => ({
+        month: b.month,
+        count: b.count,
+        avgMagnitude: Math.round((b.sum / b.count) * 100) / 100,
+      }));
   }, [allEarthquakes]);
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -72,7 +85,8 @@ export function EarthquakeHistoryTable() {
         <div>
           <h1 className="text-3xl font-bold text-cr-navy dark:text-white">{_t("history.title")}</h1>
           <p className="text-text-muted mt-1">
-            {totalFiltered} {_t("history.events")} · {new Date().toLocaleDateString("es-CR")}
+            {totalFiltered} {_t("history.events")}
+            {offlineCopy && ` · ${_t("map.offlineCopy")}`}
           </p>
         </div>
         <ExportButton earthquakes={earthquakes} />

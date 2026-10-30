@@ -1,0 +1,4 @@
+# Reglas explícitas: las versiones nuevas de ruff no deben cambiar lo que rompe CI
+[lint]
+select = ["E", "F"]
+ignore = ["E501"]

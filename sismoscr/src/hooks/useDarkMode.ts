@@ -1,26 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+
+function subscribe(onChange: () => void) {
+  window.addEventListener("darkchange", onChange);
+  return () => window.removeEventListener("darkchange", onChange);
+}
+
+const readDark = () => localStorage.getItem("sismoscr-dark") === "true";
 
 export function useDarkMode() {
-  const [dark, setDark] = useState(false);
+  const dark = useSyncExternalStore(subscribe, readDark, () => false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("sismoscr-dark");
-    if (stored === "true") {
-      setDark(true);
-      document.documentElement.classList.add("dark");
-    }
+  const toggle = useCallback(() => {
+    const next = !readDark();
+    localStorage.setItem("sismoscr-dark", String(next));
+    document.documentElement.classList.toggle("dark", next);
+    window.dispatchEvent(new Event("darkchange"));
   }, []);
-
-  const toggle = () => {
-    setDark((prev) => {
-      const next = !prev;
-      localStorage.setItem("sismoscr-dark", String(next));
-      document.documentElement.classList.toggle("dark", next);
-      return next;
-    });
-  };
 
   return { dark, toggle };
 }

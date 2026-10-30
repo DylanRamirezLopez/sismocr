@@ -8,6 +8,14 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///./sismocr.db"
 
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://sismoscr.app",
+        "https://sismoscr.vercel.app",
+        "https://sismoscr-git-main-portafolioddy.vercel.app",
+    ]
+
     ws_max_connections: int = 1000
     ws_heartbeat_interval: int = 30
 

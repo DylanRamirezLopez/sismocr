@@ -20,12 +20,6 @@ logger = logging.getLogger("sismocr.service")
 
 
 async def get_recent(db: AsyncSession, hours: int = 24) -> list[Earthquake]:
-    redis = get_redis()
-    cache_key = f"earthquakes:recent:{hours}"
-    cached = redis.get(cache_key)
-    if cached:
-        return [Earthquake(**item) for item in json.loads(cached)]
-
     since = datetime.now(timezone.utc) - timedelta(hours=hours)
     stmt = (
         select(Earthquake)
@@ -34,9 +28,7 @@ async def get_recent(db: AsyncSession, hours: int = 24) -> list[Earthquake]:
         .limit(100)
     )
     result = await db.execute(stmt)
-    quakes = list(result.scalars().all())
-    redis.setex(cache_key, 30, json.dumps([q.__dict__ for q in quakes], default=str))
-    return quakes
+    return list(result.scalars().all())
 
 
 async def get_history(
@@ -106,7 +98,7 @@ async def get_stats(db: AsyncSession) -> dict:
             Earthquake.source
         )
     )
-    by_source = {str(row.source): row.cnt for row in sources_raw}
+    by_source = {row.source.value: row.cnt for row in sources_raw}
 
     top_raw = await db.execute(
         select(Earthquake.magnitude, Earthquake.location_description, Earthquake.occurred_at)

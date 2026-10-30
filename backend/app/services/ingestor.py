@@ -14,6 +14,9 @@ from app.services.geocoder import get_province as _get_province
 
 logger = logging.getLogger("sismocr.ingestor")
 
+# Costa Rica no usa horario de verano
+CR_TZ = timezone(timedelta(hours=-6))
+
 
 class RawQuakeData:
     def __init__(
@@ -124,7 +127,7 @@ class IngestorService:
         for match in pattern.finditer(html):
             try:
                 lat_str, lon_str, popup_html = match.groups()
-                lat, lon = float(lat_str), -float(lon_str)
+                lat, lon = float(lat_str), float(lon_str)
 
                 # Extract fields from popup HTML using simple patterns
                 mag = re.search(r"Magnitud:</td>\s*<td[^>]*>([\d.]+)", popup_html)
@@ -255,10 +258,10 @@ class IngestorService:
         for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"]:
             try:
                 dt = datetime.strptime(raw, fmt)
-                return dt.replace(tzinfo=timezone.utc)
+                return dt.replace(tzinfo=CR_TZ).astimezone(timezone.utc)
             except ValueError:
                 continue
-        logger.warning("OVSICORI unparseable date: %s", raw)
-        return datetime.now(timezone.utc)
+        # Sin fecha fiable se descarta: inventar now() generaría una falsa alerta
+        raise ValueError(f"OVSICORI unparseable date: {raw}")
 
 

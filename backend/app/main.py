@@ -29,9 +29,13 @@ file_handler.setFormatter(
 )
 
 root_logger = logging.getLogger("sismocr")
+
+RATE_LIMIT_MAX_IPS = 10_000
 root_logger.addHandler(file_handler)
 
 logger = logging.getLogger("sismocr")
+
+RATE_LIMIT_MAX_IPS = 10_000
 
 
 @asynccontextmanager
@@ -40,8 +44,6 @@ async def lifespan(app: FastAPI):
     await init_redis()
 
     async with engine.begin() as conn:
-        # Drop and recreate to pick up schema changes (safe while DB is empty)
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     asyncio.create_task(alert_manager.heartbeat())
@@ -67,15 +69,41 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Va antes que CORS: el último middleware añadido es el externo y así el 429 lleva cabeceras CORS
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # /health no consume cuota: un 429 aquí haría que Render reinicie el servicio
+    if request.url.path == "/health":
+        return await call_next(request)
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window = 60
+
+    if not hasattr(app.state, "_rate_limit_store"):
+        app.state._rate_limit_store = defaultdict(list)
+
+    stores = app.state._rate_limit_store
+    if len(stores) > RATE_LIMIT_MAX_IPS:
+        for ip in [ip for ip, hits in stores.items() if not hits or hits[-1] < now - window]:
+            del stores[ip]
+
+    store = stores[client_ip]
+    while store and store[0] < now - window:
+        store.pop(0)
+
+    if len(store) >= settings.rate_limit_per_minute:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests", "code": "RATE_LIMITED"},
+        )
+
+    store.append(now)
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://sismoscr.app",
-        "https://sismoscr.vercel.app",
-        "https://sismoscr-git-main-portafolioddy.vercel.app",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
@@ -93,29 +121,6 @@ if settings.enable_api_v2:
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": settings.app_name, "version": "1.0.0"}
-
-
-@app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
-    client_ip = request.client.host if request.client else "unknown"
-    now = time.time()
-    window = 60
-
-    if not hasattr(app.state, "_rate_limit_store"):
-        app.state._rate_limit_store = defaultdict(list)
-
-    store = app.state._rate_limit_store[client_ip]
-    while store and store[0] < now - window:
-        store.pop(0)
-
-    if len(store) >= settings.rate_limit_per_minute:
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Too many requests", "code": "RATE_LIMITED"},
-        )
-
-    store.append(now)
-    return await call_next(request)
 
 
 if __name__ == "__main__":

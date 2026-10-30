@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_factory
-from app.models.earthquake import SourceEnum
+from app.models.earthquake import Earthquake
 from app.schemas.earthquake import EarthquakeAlertPayload
 from app.services.alert_manager import alert_manager
 from app.services.deduplicator import DeduplicatorService
@@ -17,6 +18,9 @@ from app.services.ingestor import IngestorService, RawQuakeData
 logger = logging.getLogger("sismocr.ingestion_worker")
 
 worker_heartbeats: dict[str, datetime] = {}
+
+ALERT_MAX_AGE = timedelta(minutes=15)
+ALERT_MIN_MAGNITUDE = 4.0
 
 
 def stamp_heartbeat(name: str):
@@ -48,21 +52,30 @@ async def process_quake_batch(quakes: list[RawQuakeData], db: AsyncSession):
     ingestor = IngestorService(db)
     dedup = DeduplicatorService(db)
 
-    new_quakes = []
-    for quake in quakes:
+    # Un sondeo repite los mismos eventos: lo ya guardado no se reprocesa ni se realerta
+    unique = {q.external_id: q for q in quakes}
+    known = set(
+        (await db.execute(select(Earthquake.external_id).where(Earthquake.external_id.in_(list(unique))))).scalars()
+    )
+
+    raw_new: list[RawQuakeData] = []
+    merged_count = 0
+    for quake in unique.values():
+        if quake.external_id in known:
+            continue
         existing = await dedup.is_duplicate(quake)
         if existing:
-            merged = await dedup.merge(existing, quake)
-            new_quakes.append(merged)
+            await dedup.merge(existing, quake)
+            merged_count += 1
         else:
-            new_quakes.append(quake)
-
-    raw_new = [q for q in new_quakes if isinstance(q, RawQuakeData)]
-    merged_new = [q for q in new_quakes if not isinstance(q, RawQuakeData)]
+            raw_new.append(quake)
 
     if raw_new:
         inserted = await ingestor.bulk_insert(raw_new)
-        for eq in inserted:
+        now = datetime.now(timezone.utc)
+        for q, eq in zip(raw_new, inserted):
+            if q.magnitude < ALERT_MIN_MAGNITUDE or now - q.occurred_at > ALERT_MAX_AGE:
+                continue
             payload = EarthquakeAlertPayload(
                 id=eq.id,
                 magnitude=eq.magnitude,
@@ -76,24 +89,10 @@ async def process_quake_batch(quakes: list[RawQuakeData], db: AsyncSession):
             )
             await alert_manager.broadcast(payload)
 
-    for eq in merged_new:
-        payload = EarthquakeAlertPayload(
-            id=eq.id,
-            magnitude=eq.magnitude,
-            depth_km=eq.depth_km,
-            latitude=eq.latitude,
-            longitude=eq.longitude,
-            location_description=eq.location_description,
-            province=eq.province,
-            source=eq.source.value,
-            occurred_at=eq.occurred_at,
-        )
-        await alert_manager.broadcast(payload)
-
     logger.info(
         "Batch processed: %d new, %d merged",
-        len(raw_new) if raw_new else 0,
-        len(merged_new),
+        len(raw_new),
+        merged_count,
     )
 
 

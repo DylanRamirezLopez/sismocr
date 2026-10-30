@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, func, and_
@@ -129,7 +128,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
         Earthquake.source, func.count(Earthquake.id).label("cnt")
     ).group_by(Earthquake.source)
     sources_raw = await db.execute(sources_q)
-    by_source = {str(row.source): row.cnt for row in sources_raw}
+    by_source = {row.source.value: row.cnt for row in sources_raw}
 
     # Top 5 magnitudes
     top_q = (
@@ -175,7 +174,8 @@ async def get_earthquake_detail(
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await alert_manager.register(websocket)
+    if not await alert_manager.register(websocket):
+        return
     try:
         while True:
             data = await websocket.receive_text()
